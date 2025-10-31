@@ -3,6 +3,28 @@ import axios from 'axios'; // es para hacer peticiones HTTP
 import React, { useState } from 'react';
 import { Clock, User, Car, Gavel, Heart, Plus, Search, Bell, LogOut, Menu, X } from 'lucide-react';
 
+
+
+const RAW_BASE = import.meta.env.VITE_API_URL?.trim();
+const BASE = RAW_BASE
+  ? RAW_BASE.replace(/\/+$/, '') // sin trailing slash
+  : ''; // vacío = usará ruta relativa
+
+const API = axios.create({
+  // Si no pones VITE_API_URL, cae a relativo '/api' (útil en dev/proxy)
+  baseURL: BASE ? (BASE.endsWith('/api') ? BASE : `${BASE}/api`) : '/api',
+  // Si en el futuro usas cookies/sesiones, activa:
+  // withCredentials: true,
+});
+
+// (Opcional) Debug rápido para ver a dónde pega el frontend
+if (!RAW_BASE) {
+  console.warn('[CarBid] VITE_API_URL no definida. Usando baseURL relativa:', API.defaults.baseURL);
+} else {
+  console.log('[CarBid] VITE_API_URL =', RAW_BASE, ' -> baseURL efectiva =', API.defaults.baseURL);
+}
+
+
 /* =========================
    SUBCOMPONENTES (fuera de CarBid)
    ========================= */
@@ -1012,12 +1034,42 @@ const CarBid = () => {
     return `${hours}h ${minutes}m`;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setUser({ id: 1, name: 'Juan Pérez', email: loginForm.email, role: 'both' });
-    setCurrentView('dashboard');
-    setLoginForm({ email: '', password: '' });
+
+    try {
+      const payload = {
+        email: loginForm.email.trim(),
+        password: loginForm.password,
+      };
+
+      // ✅ llamada real al backend (usa el cliente API configurado arriba)
+      const { data } = await API.post('/auth/login', payload);
+
+      // ✅ guarda el token en localStorage
+      localStorage.setItem('carbid_token', data.token);
+
+      // ✅ guarda los datos del usuario en el estado
+      setUser({
+        id: data.user.id,
+        name: data.user.name,
+        lastname: data.user.lastname,
+        email: data.user.email,
+        role: data.user.role,
+        phone: data.user.phone,
+      });
+
+      // limpia el formulario y redirige al dashboard
+      setLoginForm({ email: '', password: '' });
+      setCurrentView('dashboard');
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        'No se pudo iniciar sesión. Revisa tus credenciales.';
+      alert(msg);
+    }
   };
+
 
   const TOKEN_KEY = 'carbid_token';
   const saveToken = (t) => localStorage.setItem(TOKEN_KEY, t);
@@ -1034,7 +1086,8 @@ const CarBid = () => {
         phone: registerForm.phone?.trim() || null
       };
 
-      const { data } = await axios.post('/api/auth/register', payload);
+      const { data } = await API.post('/auth/register', payload);
+
 
       // guarda sesión
       saveToken(data.token);
