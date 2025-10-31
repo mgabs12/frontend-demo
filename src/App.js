@@ -3,26 +3,30 @@ import axios from 'axios'; // es para hacer peticiones HTTP
 import React, { useState } from 'react';
 import { Clock, User, Car, Gavel, Heart, Plus, Search, Bell, LogOut, Menu, X } from 'lucide-react';
 
+const RAW_BASE =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    typeof import.meta.env.VITE_API_URL !== "undefined")
+    ? String(import.meta.env.VITE_API_URL).trim()
+    : "";
 
-
-const RAW_BASE = import.meta.env.VITE_API_URL?.trim();
-const BASE = RAW_BASE
-  ? RAW_BASE.replace(/\/+$/, '') // sin trailing slash
-  : ''; // vacío = usará ruta relativa
+const BASE = RAW_BASE ? RAW_BASE.replace(/\/+$/, "") : "";
 
 const API = axios.create({
-  // Si no pones VITE_API_URL, cae a relativo '/api' (útil en dev/proxy)
-  baseURL: BASE ? (BASE.endsWith('/api') ? BASE : `${BASE}/api`) : '/api',
-  // Si en el futuro usas cookies/sesiones, activa:
-  // withCredentials: true,
+  baseURL: BASE ? (BASE.endsWith("/api") ? BASE : `${BASE}/api`) : "/api",
 });
 
-// (Opcional) Debug rápido para ver a dónde pega el frontend
 if (!RAW_BASE) {
-  console.warn('[CarBid] VITE_API_URL no definida. Usando baseURL relativa:', API.defaults.baseURL);
+  console.warn(
+    "[CarBid] ⚠️ VITE_API_URL no definida o import.meta.env no disponible. Usando baseURL relativa:",
+    API.defaults.baseURL
+  );
 } else {
-  console.log('[CarBid] VITE_API_URL =', RAW_BASE, ' -> baseURL efectiva =', API.defaults.baseURL);
+  console.log(
+    `[CarBid] ✅ VITE_API_URL = ${RAW_BASE} → baseURL efectiva = ${API.defaults.baseURL}`
+  );
 }
+
 
 
 /* =========================
@@ -1068,7 +1072,7 @@ const CarBid = () => {
         'No se pudo iniciar sesión. Revisa tus credenciales.';
       alert(msg);
     }
-  };
+ };
 
 
   const TOKEN_KEY = 'carbid_token';
